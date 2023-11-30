@@ -34,14 +34,8 @@ def main():
     print(f'Confusion matrix:\n{conf_matrix[0]}\n{conf_matrix[1]}')
 
     
-
+# Generate a DataFrame with random NBA statistics.
 def random_df():
-    """
-    Generate a DataFrame with random NBA statistics.
-
-    :return: A pandas DataFrame.
-    """
-
     num_rows = 1000
 
     # Random NBA stats
