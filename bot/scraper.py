@@ -122,7 +122,7 @@ class Scraper():
 
     # Return curent stats of all teams in teams list
     def _get_team_stats(self, teams):
-        data, delay = {}, 5
+        data, delay = {}, 20
         for stat in self.stats:
             tr_url = self._get_stats_url(stat)
             response = requests.get(tr_url)
