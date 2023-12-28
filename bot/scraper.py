@@ -33,19 +33,23 @@ class Scraper():
         if len(games) == 0:
             print(f'No matchups on {self.date}')
             return None 
-        print(f'{len(games)} matches with {len(teams)} teams playing')
+        print(f'{len(games)} matches found')
 
         converted_team_names = [self._name_dict.get(team, "Invalid team") for team in teams]
         team_stats = self._get_team_stats(converted_team_names)
+        if team_stats is None:
+            print("Error: No team stats found")
+            return None
 
         for matchup in games:
             home_team = matchup[0]
             away_team = matchup[1]
             outcome = matchup[2]
+            game_date = matchup[3]
             home_stats = team_stats[self._name_dict[home_team]]
             away_stats = team_stats[self._name_dict[away_team]]
             
-            obj = {'home_team': home_team, 'away_team': away_team}
+            obj = {'home_team': home_team, 'away_team': away_team, 'date': game_date}
             if outcome != None: obj['outcome'] = int(outcome)
             for stat in self.stats:
                 home_stat = f'home_{stat}'
@@ -62,10 +66,11 @@ class Scraper():
     def get_matchups_over_period(self, start_date, end_date):
         MAX_YEARS = 5
         output = []
+        total_days = self._find_number_of_days(start_date, end_date)
 
         self.date, i = start_date, 0
         
-        while self.date != end_date:
+        while i < total_days:
             if i > (MAX_YEARS * 365):
                 print("Error: Max years exceeded")
                 return None
@@ -74,6 +79,7 @@ class Scraper():
             self._update_date()
             output.append(data)
             i += 1
+            print(f'{i/total_days * 100:.2f}% complete')
 
         return output
 
@@ -83,7 +89,6 @@ class Scraper():
         br_url = self._get_schedule_url()
         if br_url is None:
             return None
-        print(br_url)
         response = requests.get(br_url) 
         html_content = response.text
 
@@ -110,23 +115,25 @@ class Scraper():
                     if home_pts.get_text() != '' and away_pts.get_text() != '':
                         outcome = 1 if int(home_pts.get_text()) > int(away_pts.get_text()) else 0
                     
-                    games.append((home_team, away_team, outcome))
+                    games.append((home_team, away_team, outcome, game_date))
         
         return games, teams
 
 
     # Return curent stats of all teams in teams list
     def _get_team_stats(self, teams):
-        data = {}
+        data, delay = {}, 5
         for stat in self.stats:
             tr_url = self._get_stats_url(stat)
             response = requests.get(tr_url)
+
+            while response.status_code != 200:
+                print(f"Error: {response.status_code} status code at url: {tr_url}, delaying {delay} seconds...")
+                time.sleep(delay)
+                response = requests.get(tr_url)
+                delay += 5
+
             html_content = response.text
-
-            if response.status_code != 200:
-                print(f"Error: {response.status_code} response from {tr_url}")
-                return None
-
             soup = BeautifulSoup(html_content, 'html.parser')
             table = soup.find('table')
             if not table:
@@ -206,24 +213,37 @@ class Scraper():
             day += 1
 
         self.date = f"{month:02d}/{day:02d}/{year}"
+
+
+    def _find_number_of_days(self, start_date, end_date):
+        start = datetime.strptime(start_date, '%m/%d/%Y')
+        end = datetime.strptime(end_date, '%m/%d/%Y')
+        return abs((end - start).days)
             
     def write_to_csv(self, data):
         filename = f'matchups.csv'
+        id = 0
         with open(filename, 'w', newline='') as file:
             writer = csv.writer(file)
-            home_stats_header, away_stats_header = [f'home_{stat}' for stat in self.stats], [f'away_{stat}' for stat in self.stats]
-            header = ['Date', 'home_team', 'away_team', 'outcome'] + home_stats_header + away_stats_header
+            header = ['id', 'date', 'home_team', 'away_team', 'outcome']
+            for stat in self.stats: 
+                header.append(f'home_{stat}')
+                header.append(f'away_{stat}')
             writer.writerow(header)  # Write header row
 
             for day in data:
-                for id, game_data in data.items():
-                    writer.writerow([id, game_data['date'], game_data['home_team'], game_data['away_team'], game_data['outcome']] + list(game_data['home_stats'].values()) + list(game_data['away_stats'].values()))
+                for matchup in day:
+                    row = [id, matchup['date'], matchup['home_team'], matchup['away_team'], matchup['outcome']]
+                    for stat in self.stats: 
+                        row.append(matchup[f'home_{stat}'])
+                        row.append(matchup[f'away_{stat}'])
+                    writer.writerow(row)
+                    id += 1
 
         print(f"CSV file '{filename}' created successfully.")
 
 if __name__ == "__main__":
-    scraper = Scraper(date='11/24/2023')
-    # out = scraper.get_matchups_over_period('11/01/2023', '11/03/2023')
-    out = scraper.get_todays_matchups()
-    print(out)
+    scraper = Scraper()
+    out = scraper.get_matchups_over_period('10/20/2022', '4/02/2023')
+    scraper.write_to_csv(out)
     
