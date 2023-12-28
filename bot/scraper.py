@@ -1,9 +1,10 @@
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
-from datetime import datetime
 import pandas as pd
 import requests
 import csv
 import time
+
 
 class Scraper():
 
@@ -29,33 +30,60 @@ class Scraper():
         print(f"Getting matchups for {self.date}...")
 
         games, teams = self._get_games()
+        if len(games) == 0:
+            print(f'No matchups on {self.date}')
+            return None 
         print(f'{len(games)} matches with {len(teams)} teams playing')
+
         converted_team_names = [self._name_dict.get(team, "Invalid team") for team in teams]
         team_stats = self._get_team_stats(converted_team_names)
 
         for matchup in games:
             home_team = matchup[0]
             away_team = matchup[1]
+            outcome = matchup[2]
             home_stats = team_stats[self._name_dict[home_team]]
             away_stats = team_stats[self._name_dict[away_team]]
             
             obj = {'home_team': home_team, 'away_team': away_team}
+            if outcome != None: obj['outcome'] = int(outcome)
             for stat in self.stats:
                 home_stat = f'home_{stat}'
                 away_stat = f'away_{stat}'
                 obj[home_stat] = home_stats[stat]
                 obj[away_stat] = away_stats[stat]
-            
+
             data.append(obj)
         return data
-    
+
+
+    # Downloads csv of matchups over a time period or between seasons
+    # Params: start_date/end_date -> 'month/day/year' 2 digits for month/day 4 digits for year!!
+    def get_matchups_over_period(self, start_date, end_date):
+        MAX_YEARS = 5
+        output = []
+
+        self.date, i = start_date, 0
+        
+        while self.date != end_date:
+            if i > (MAX_YEARS * 365):
+                print("Error: Max years exceeded")
+                return None
+            
+            data = self.get_todays_matchups()
+            self._update_date()
+            output.append(data)
+            i += 1
+
+        return output
+
 
     # Return list of games, and list of teams playing
     def _get_games(self):
         br_url = self._get_schedule_url()
         if br_url is None:
             return None
-        
+        print(br_url)
         response = requests.get(br_url) 
         html_content = response.text
 
@@ -72,8 +100,17 @@ class Scraper():
                 if game_date == self.date:
                     home_team = row.find('td', attrs={'data-stat': 'home_team_name'}).get_text()
                     away_team = row.find('td', attrs={'data-stat': 'visitor_team_name'}).get_text()
+
                     teams.extend([home_team, away_team])
-                    games.append((home_team, away_team))
+
+                    outcome = None
+                    home_pts = row.find('td', attrs={'data-stat': 'home_pts'})
+                    away_pts = row.find('td', attrs={'data-stat': 'visitor_pts'})
+
+                    if home_pts.get_text() != '' and away_pts.get_text() != '':
+                        outcome = 1 if int(home_pts.get_text()) > int(away_pts.get_text()) else 0
+                    
+                    games.append((home_team, away_team, outcome))
         
         return games, teams
 
@@ -129,18 +166,9 @@ class Scraper():
         parts = self.date.split('/')
         year, month = int(parts[2]), int(parts[0])
         months = {
-            1: "January",
-            2: "February",
-            3: "March",
-            4: "April",
-            5: "May",
-            6: "June",
-            7: "July",
-            8: "August",
-            9: "September",
-            10: "October",
-            11: "November",
-            12: "December"
+            1: "January", 2: "February", 3: "March", 4: "April",
+            5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 
+            10: "October", 11: "November", 12: "December"
         }
         
         if month not in months:
@@ -157,11 +185,45 @@ class Scraper():
         datetime_obj = datetime.strptime(date_string, '%a, %b %d, %Y')
         formatted_date = datetime_obj.strftime('%m/%d/%Y')
         return formatted_date
-        
+
+    # Increment date by one day
+    def _update_date(self):
+        parts = self.date.split('/')
+        month, day, year = int(parts[0]), int(parts[1]), int(parts[2])
+
+        # Get the last day of the current month
+        last_day = (datetime(year, month % 12 + 1, 1) - timedelta(days=1)).day
+
+        # Check if it's the last day of the month
+        if day == last_day:
+            if month == 12:
+                month = 1
+                year += 1
+            else:
+                month += 1
+            day = 1
+        else:
+            day += 1
+
+        self.date = f"{month:02d}/{day:02d}/{year}"
+            
+    def write_to_csv(self, data):
+        filename = f'matchups.csv'
+        with open(filename, 'w', newline='') as file:
+            writer = csv.writer(file)
+            home_stats_header, away_stats_header = [f'home_{stat}' for stat in self.stats], [f'away_{stat}' for stat in self.stats]
+            header = ['Date', 'home_team', 'away_team', 'outcome'] + home_stats_header + away_stats_header
+            writer.writerow(header)  # Write header row
+
+            for day in data:
+                for id, game_data in data.items():
+                    writer.writerow([id, game_data['date'], game_data['home_team'], game_data['away_team'], game_data['outcome']] + list(game_data['home_stats'].values()) + list(game_data['away_stats'].values()))
+
+        print(f"CSV file '{filename}' created successfully.")
 
 if __name__ == "__main__":
-    scraper = Scraper()
-    data = scraper.get_todays_matchups()
-
-    df = pd.DataFrame(data)
-    print(df)
+    scraper = Scraper(date='11/24/2023')
+    # out = scraper.get_matchups_over_period('11/01/2023', '11/03/2023')
+    out = scraper.get_todays_matchups()
+    print(out)
+    
