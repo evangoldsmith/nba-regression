@@ -68,6 +68,8 @@ class Scraper():
         output = []
         total_days = self._find_number_of_days(start_date, end_date)
 
+        print(f"Getting matchups across {total_days} days.")
+
         self.date, i = start_date, 0
         
         while i < total_days:
@@ -75,7 +77,7 @@ class Scraper():
                 print("Error: Max years exceeded")
                 return None
             
-            data = self.get_todays_matchups()
+            data = self.get_todays_matchups()   
             self._update_date()
             output.append(data)
             i += 1
@@ -218,7 +220,7 @@ class Scraper():
     def _find_number_of_days(self, start_date, end_date):
         start = datetime.strptime(start_date, '%m/%d/%Y')
         end = datetime.strptime(end_date, '%m/%d/%Y')
-        return abs((end - start).days)
+        return abs((end - start).days) + 1
             
     def write_to_csv(self, data):
         filename = f'matchups.csv'
@@ -232,6 +234,8 @@ class Scraper():
             writer.writerow(header)  # Write header row
 
             for day in data:
+                if day is None:
+                    continue
                 for matchup in day:
                     row = [id, matchup['date'], matchup['home_team'], matchup['away_team'], matchup['outcome']]
                     for stat in self.stats: 
@@ -244,6 +248,7 @@ class Scraper():
 
 if __name__ == "__main__":
     scraper = Scraper()
-    out = scraper.get_matchups_over_period('10/20/2022', '4/02/2023')
-    scraper.write_to_csv(out)
+    data = scraper.get_todays_matchups()
+    df = pd.DataFrame(data)
+    print(df)
     
