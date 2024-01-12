@@ -42,20 +42,14 @@ class Scraper():
             return None
 
         for matchup in games:
-            home_team = matchup[0]
-            away_team = matchup[1]
-            outcome = matchup[2]
-            game_date = matchup[3]
-            home_stats = team_stats[self._name_dict[home_team]]
-            away_stats = team_stats[self._name_dict[away_team]]
+            home_team, away_team, outcome, game_date = matchup
+            home_stats, away_stats = team_stats[self._name_dict[home_team]], team_stats[self._name_dict[away_team]]
             
             obj = {'home_team': home_team, 'away_team': away_team, 'date': game_date}
             if outcome != None: obj['outcome'] = int(outcome)
             for stat in self.stats:
-                home_stat = f'home_{stat}'
-                away_stat = f'away_{stat}'
-                obj[home_stat] = home_stats[stat]
-                obj[away_stat] = away_stats[stat]
+                home_stat, away_stat = f'home_{stat}', f'away_{stat}'
+                obj[home_stat], obj[away_stat] = home_stats[stat], away_stats[stat]
 
             data.append(obj)
         return data
