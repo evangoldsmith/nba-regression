@@ -31,7 +31,7 @@ def main():
     
     for prediction in tweets:
         response = client.create_tweet(text=prediction)
-        print(response)
+        print(prediction)
 
 
 def get_predictions(data):
@@ -50,16 +50,27 @@ def get_predictions(data):
     tweets = []
     
     for i in range(len(data)):
-        out = f'{data[i]["away_team"]} @ {data[i]["home_team"]}\n\n'
+        away, home = data[i]["away_team"], data[i]["home_team"]
+        out = f'{away} {get_team_emoji(away)}  @  {home} {get_team_emoji(home)}\n\n'
 
-        winner, prob = data[i]['home_team'] if predictions[i][1] > predictions[i][0] else data[i]['away_team'], max(predictions[i])
+        winner, prob = home if predictions[i][1] > predictions[i][0] else away, max(predictions[i])
         prob_percentage = prob * 100
-        out += f'Projected Winner: {winner}\nProbability: {prob_percentage:.1f}%'
+        out += f'Projected Winner: {winner} {get_team_emoji(winner)}\nProbability: {prob_percentage:.1f}%'
 
         tweets.append(out)
 
     return tweets
 
+
+def get_team_emoji(teamname):
+    emoji_map = {
+        "Atlanta Hawks": '🦅', "Boston Celtics": '🍀', "Brooklyn Nets": '🏙️', "Charlotte Hornets": '🐝', "Chicago Bulls": '🐂', "Cleveland Cavaliers": '⚔️', "Dallas Mavericks": '🐴',
+        "Denver Nuggets": '⛏️', "Detroit Pistons": '🚗', "Golden State Warriors": '🌉', "Houston Rockets": '🚀', "Indiana Pacers": '🏎️', "Los Angeles Clippers": '✂️', "Los Angeles Lakers": '🏀', "Memphis Grizzlies": '🐻', 
+        "Miami Heat": '🔥', "Milwaukee Bucks": '🦌', "Minnesota Timberwolves": '🐺', "New Orleans Pelicans": '🐦', "New York Knicks": '🗽', "Oklahoma City Thunder": '⚡',
+        "Orlando Magic": '🪄', "Philadelphia 76ers": '🔔', "Phoenix Suns": '☀️', "Portland Trail Blazers": '🌲', "Sacramento Kings": '👑', "San Antonio Spurs": '🤠',"Toronto Raptors": '🦖', "Utah Jazz": '🎷', "Washington Wizards": '🧙‍♂️',
+    }
+
+    return emoji_map[teamname]
 
 
 if __name__ == "__main__":
