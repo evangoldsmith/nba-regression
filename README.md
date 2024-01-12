@@ -1,8 +1,10 @@
 # nba-regression
 NBA Matchup Prediction Model Using Logistic Regression
 
+[@BasketBrainBot](https://twitter.com/BasketBrainBot) on twitter tweets out game picks each day! Bot is deployed using Google Cloud Functions.
+
 ## Data
-All data was webscraped using BeautifulSoup [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/) from [TeamRankings.com](https://www.teamrankings.com/) and [Basketball-Reference.com](https://www.basketball-reference.com).
+All data is webscraped using BeautifulSoup [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/) from [TeamRankings.com](https://www.teamrankings.com/) and [Basketball-Reference.com](https://www.basketball-reference.com). The `scraper.
 
 There are various .csv files under the `data/` directory containing training data for the model.
 
