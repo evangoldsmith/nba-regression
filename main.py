@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 from joblib import load
 from scraper import Scraper
@@ -8,24 +9,29 @@ MODEL_PATH = 'finalized_model.sav'
 
 def main():
 
+    historic = False
+
+    # Check if date was passed in
+    if len(sys.argv) > 1:
+        date_arg = sys.argv[1]
+        historic = True
+    print(historic)
     # Change date by passing in 'date' argument -> Scraper(date='MM/DD/YYYY')
-    scraper = Scraper()
+    scraper = Scraper() if not historic else Scraper(date=date_arg)
 
     data = scraper.get_todays_matchups()
-    predictions = get_predictions(data, historic=False)
+    predictions = get_predictions(data, historic)
 
     for prediction in predictions:
+        print('\n------------\n')
         print(prediction)
-        print()
+    print('\n------------\n')
 
 
 def get_predictions(data, historic):
     df = pd.DataFrame(data)
-
-    X = df.drop(['date', 'home_team', 'away_team'], axis=1)
-
-    if historic:
-        df.drop(['outcome'], axis=1)
+        
+    X = df.drop(['date', 'home_team', 'away_team'], axis=1) if not historic else df.drop(['date', 'home_team', 'away_team', 'outcome'], axis=1)
 
     # Normalize the features
     scaler = StandardScaler()
