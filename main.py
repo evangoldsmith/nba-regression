@@ -1,43 +1,31 @@
-import os
-import tweepy
 import pandas as pd
 from joblib import load
-from dotenv import load_dotenv
 from scraper import Scraper
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 
-MODEL_PATH = 'bot/finalized_model.sav'
-
-load_dotenv()
-BEARER_TOKEN = os.getenv('BEARER_TOKEN')
-CONSUMER_KEY = os.getenv('TWITTER_API_KEY')
-CONSUMER_SECRET = os.getenv('TWITTER_API_SECRET')
-ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')
-ACCESS_TOKEN_SECRET = os.getenv('ACCESS_TOKEN_SECRET')
+MODEL_PATH = 'finalized_model.sav'
 
 def main():
+
+    # Change date by passing in 'date' argument -> Scraper(date='MM/DD/YYYY')
     scraper = Scraper()
 
     data = scraper.get_todays_matchups()
-    tweets = get_predictions(data)
+    predictions = get_predictions(data, historic=False)
 
-    client = tweepy.Client(
-        consumer_key=CONSUMER_KEY,
-        consumer_secret=CONSUMER_SECRET,
-        access_token=ACCESS_TOKEN,
-        access_token_secret=ACCESS_TOKEN_SECRET
-    )
-    
-    for prediction in tweets:
-        response = client.create_tweet(text=prediction)
+    for prediction in predictions:
         print(prediction)
+        print()
 
 
-def get_predictions(data):
+def get_predictions(data, historic):
     df = pd.DataFrame(data)
 
     X = df.drop(['date', 'home_team', 'away_team'], axis=1)
+
+    if historic:
+        df.drop(['outcome'], axis=1)
 
     # Normalize the features
     scaler = StandardScaler()
