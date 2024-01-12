@@ -2,5 +2,8 @@ scikit-learn
 python-dotenv
 joblib
 pandas
-tweepy
 beautifulsoup4
+
+### UNCOMMENT BELOW IF USING GCP ###
+# google-cloud
+# tweepy
