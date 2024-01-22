@@ -2,28 +2,27 @@ import os
 import tweepy
 import pandas as pd
 from joblib import load
-from dotenv import load_dotenv
 from scraper import Scraper
 from google.cloud import storage
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 
-MODEL_PATH = 'model.sav'
-
-load_dotenv()
 BEARER_TOKEN = os.getenv('BEARER_TOKEN')
 CONSUMER_KEY = os.getenv('TWITTER_API_KEY')
 CONSUMER_SECRET = os.getenv('TWITTER_API_SECRET')
 ACCESS_TOKEN = os.getenv('ACCESS_TOKEN')
 ACCESS_TOKEN_SECRET = os.getenv('ACCESS_TOKEN_SECRET')
-BUCKET_NAME = os.getenv('ACCESS_TOKEN_SECRET')
-BLOB_NAME = os.getenv('ACCESS_TOKEN_SECRET')
+BUCKET = os.getenv('BUCKET_NAME')
+BLOB = os.genenv('BLOB_NAME')
+
+MODEL_PATH = 'model.sav'
 
 def hello_pubsub(event, context):
+    print(f'CONSUMER KEY: {CONSUMER_KEY}')
     scraper = Scraper()
     data = scraper.get_todays_matchups()
 
-    download_blob(BUCKET_NAME, BLOB_NAME, 'model.sav')
+    download_blob(bucket_name=BUCKET, source_blob_name=BLOB, destination_file_name=MODEL_PATH)
     tweets = get_predictions(data)
 
     client = tweepy.Client(
@@ -39,7 +38,7 @@ def hello_pubsub(event, context):
     
 def get_predictions(data):
     df = pd.DataFrame(data)
-
+        
     X = df.drop(['date', 'home_team', 'away_team'], axis=1)
 
     # Normalize the features
@@ -63,7 +62,6 @@ def get_predictions(data):
         tweets.append(out)
 
     return tweets
-
 
 def get_team_emoji(teamname):
     emoji_map = {
