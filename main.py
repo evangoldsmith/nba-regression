@@ -1,11 +1,13 @@
 import sys
 import pandas as pd
+import csv
 from joblib import load
 from scraper import Scraper
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 
 MODEL_PATH = 'finalized_model.sav'
+CSV_PATH = 'records.csv'
 
 def main():
 
@@ -15,11 +17,12 @@ def main():
     if len(sys.argv) > 1:
         date_arg = sys.argv[1]
         historic = True
-    print(historic)
+
     # Change date by passing in 'date' argument -> Scraper(date='MM/DD/YYYY')
     scraper = Scraper() if not historic else Scraper(date=date_arg)
 
     data = scraper.get_todays_matchups()
+    write_predictions(data, historic)
     predictions = get_predictions(data, historic)
 
     for prediction in predictions:
@@ -29,8 +32,7 @@ def main():
 
 
 def get_predictions(data, historic):
-    df = pd.DataFrame(data)
-        
+    df = pd.DataFrame(data)        
     X = df.drop(['date', 'home_team', 'away_team'], axis=1) if not historic else df.drop(['date', 'home_team', 'away_team', 'outcome'], axis=1)
 
     # Normalize the features
@@ -54,6 +56,33 @@ def get_predictions(data, historic):
         tweets.append(out)
 
     return tweets
+
+
+def write_to_csv(self, data):
+    filename, id = f'matchups.csv', 0
+
+    with open(CSV_PATH, 'w', newline='') as file:
+        writer = csv.writer(file)
+        header = ['id', 'date', 'home_team', 'away_team', 'outcome', 'prediction']
+
+        for stat in self.stats: 
+            header.append(f'home_{stat}')
+            header.append(f'away_{stat}')
+
+        writer.writerow(header)  # Write header row
+
+        for day in data:
+            if day is None:
+                continue
+            for matchup in day:
+                row = [id, matchup['date'], matchup['home_team'], matchup['away_team'], matchup['outcome']]
+                for stat in self.stats: 
+                    row.append(matchup[f'home_{stat}'])
+                    row.append(matchup[f'away_{stat}'])
+                writer.writerow(row)
+                id += 1
+
+    print(f"CSV file '{filename}' created successfully.")
 
 
 def get_team_emoji(teamname):

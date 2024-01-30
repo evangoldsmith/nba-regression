@@ -18,9 +18,9 @@ class Scraper():
             "Orlando Magic": 'Orlando', "Philadelphia 76ers": 'Philadelphia', "Phoenix Suns": 'Phoenix', "Portland Trail Blazers": 'Portland', "Sacramento Kings": 'Sacramento', "San Antonio Spurs": 'San Antonio',"Toronto Raptors": 'Toronto', "Utah Jazz": 'Utah', "Washington Wizards": 'Washington',
         }
 
-        self.stats = ['points-per-game', 'true-shooting-percentage', 'offensive-rebounds-per-game', 'defensive-rebounds-per-game', 'steals-per-game', 'assist--per--turnover-ratio', 'personal-fouls-per-game', 'win-pct-all-games']
+        self.stats = ['points-per-game', 'true-shooting-percentage', 'offensive-rebounds-per-game', 'defensive-rebounds-per-game', 'steals-per-game', 'assist--per--turnover-ratio', 'personal-fouls-per-game', 'win-pct-all-games', 'win-pct-all-gamesLAST3']
         self.teams = ['Atlanta', 'Boston', 'Brooklyn', 'Charlotte', 'Chicago', 'Cleveland', 'Dallas', 'Denver', 'Detroit', 'Golden State', 'Houston', 'Indiana', 'LA Clippers', 'LA Lakers', 'Memphis', 'Miami', 'Milwaukee', 'Minnesota', 'New Orleans', 'New York', 'Okla City', 'Orlando', 'Philadelphia', 'Phoenix', 'Portland', 'Sacramento', 'San Antonio', 'Toronto', 'Utah', 'Washington']
-        self.date = time.strftime("%m/%d/%Y") if not date else date
+        self.date = time.strftime("%m/%d/%Y") if not date else date # Use current date if one isnt passed in
 
 
 
@@ -120,9 +120,13 @@ class Scraper():
     def _get_team_stats(self, teams):
         data, delay = {}, 20
         for stat in self.stats:
-            tr_url = self._get_stats_url(stat)
-            response = requests.get(tr_url)
 
+            if stat.endswith('LAST3'):
+                column, tr_url = 1, self._get_stats_url(stat[:-5])
+            else:
+                column, tr_url = 0, self._get_stats_url(stat)
+
+            response = requests.get(tr_url)
             while response.status_code != 200:
                 print(f"Error: {response.status_code} status code at url: {tr_url}, delaying {delay} seconds...")
                 time.sleep(delay)
@@ -139,9 +143,10 @@ class Scraper():
 
             for row in rows:
                 v = row.find('td', class_='text-right')
+                if column == 1 and v:
+                    v = v.find_next_sibling()
                 team_element = row.find('a')
                 if team_element and v and team_element.get_text() in teams:
-
                     team_name, value = team_element.get_text(), v.get_text()
                     if '%' in value:
                         value = value[:-1]
@@ -242,7 +247,7 @@ class Scraper():
 
 if __name__ == "__main__":
     scraper = Scraper()
-    data = scraper.get_todays_matchups()
-    df = pd.DataFrame(data)
-    print(df)
+    data = scraper.get_matchups_over_period('10/28/2022', '04/02/2023')
+
+    scraper.write_to_csv(data=data)
     
